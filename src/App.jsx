@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { Toaster } from 'react-hot-toast'
 import { LazyMotion, domAnimation } from 'framer-motion'
+import ScrollRestoration from './components/navigation/ScrollRestoration'
 
 // Route-level code splitting: every page ships in its own chunk, loaded on
 // navigation rather than bloating the initial bundle every visitor
@@ -40,6 +41,7 @@ export default function App() {
     <HelmetProvider>
       <LazyMotion features={domAnimation} strict>
         <BrowserRouter>
+          <ScrollRestoration />
           <Suspense fallback={<div className="min-h-screen bg-ivory-light" />}>
             <Routes>
               <Route path="/" element={<Home />} />

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, m } from 'framer-motion'
 import { NavLink, Link } from 'react-router-dom'
 import { HiChevronDown } from 'react-icons/hi'
@@ -79,7 +80,20 @@ function ProductsDisclosure({ item, onClose }) {
 export default function MobileMenu({ open, onClose }) {
   const reduced = usePrefersReducedMotion()
 
-  return (
+  // Rendered into document.body via a portal rather than in place inside
+  // <header>: the header applies `backdrop-blur-sm` (a backdrop-filter)
+  // once solid, and per the CSS spec an element with a filter/
+  // backdrop-filter becomes the *containing block* for its `position:
+  // fixed` descendants. With this panel nested inside <header>, its
+  // `fixed inset-0` was resolving against the header's own ~80px box
+  // instead of the viewport — collapsing the "full-screen" menu into a
+  // sliver the height of the header bar, on every page where the header is
+  // solid (i.e. always, except the homepage before it scrolls past the
+  // overlay threshold — which is exactly the "works, then breaks after
+  // scrolling" symptom this was reported as). A portal sidesteps the
+  // containing-block trap entirely without touching the header's own
+  // visual design.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <m.div
@@ -93,7 +107,7 @@ export default function MobileMenu({ open, onClose }) {
           exit={reduced ? { opacity: 1 } : { opacity: 0, y: -16 }}
           transition={{ duration: reduced ? 0 : 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
-          <div className="h-20 shrink-0" aria-hidden="true" />
+          <div className="pointer-events-none h-20 shrink-0" aria-hidden="true" />
           <nav className="flex flex-1 flex-col px-gutter pt-4" aria-label="Mobile">
             {primaryNav.map((item) =>
               item.megaMenu ? (
@@ -133,6 +147,7 @@ export default function MobileMenu({ open, onClose }) {
           </div>
         </m.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

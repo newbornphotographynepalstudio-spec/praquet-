@@ -59,7 +59,14 @@ export default function Header({ overlay = false }) {
         <button
           type="button"
           className={cn(
-            'flex h-11 w-11 items-center justify-center rounded xl:hidden',
+            // `relative z-50`: the mobile menu overlay below is `fixed z-40`
+            // and, as a *sibling* of this button inside the same `header`
+            // stacking context, would otherwise paint above a
+            // non-positioned/auto-z-index button once open — silently
+            // eating every tap meant to close/toggle the menu. Explicit
+            // z-index here keeps this button clickable above the overlay
+            // regardless of what the overlay renders.
+            'relative z-50 flex h-11 w-11 items-center justify-center rounded xl:hidden',
             solid || menuOpen ? 'text-navy' : 'text-ivory'
           )}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
