@@ -1,0 +1,11 @@
+{
+  "name": "Parquet & Decor Nepal",
+  "short_name": "Parquet & Decor",
+  "icons": [
+    { "src": "/images/brand/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/images/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#081F32",
+  "background_color": "#F4F0E8",
+  "display": "standalone"
+}
