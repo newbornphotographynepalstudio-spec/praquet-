@@ -3,24 +3,24 @@ import toast from 'react-hot-toast'
 import { materials } from '../../data/materials'
 import { services } from '../../data/services'
 import { locations } from '../../data/locations'
+import { submitInquiry } from '../../lib/submitInquiry'
 import { cn } from '../../utils/cn'
 
-const interestOptions = [
-  ...materials.map((m) => m.name),
-  ...services.map((s) => s.name),
-]
+const materialNames = materials.map((m) => m.name)
+const serviceNames = services.map((s) => s.name)
+const interestOptions = [...materialNames, ...serviceNames]
 
 const fieldClass =
   'block w-full min-h-[44px] rounded-sm border border-navy/20 bg-white px-4 py-2.5 font-body text-sm text-navy placeholder:text-charcoal/50 focus:border-gold focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-gold'
 const labelClass = 'block font-body text-xs font-semibold uppercase tracking-wide text-navy'
 const errorClass = 'mt-1 font-body text-xs text-red-700'
 
-// No backend is wired up yet (Phase 2 intentionally stops short of the
-// Firestore lead-management system — see README.md). Submitting here
-// validates the fields and logs the structured lead payload matching the
-// future data model (name/phone/email/location/interestedProduct/
-// projectType/message/source/utm/date/status) so Phase 3 integration is a
-// drop-in — it does not currently email, store, or notify anyone.
+// Writes to Firestore (the `inquiries` collection managed in /admin —
+// see the Phase 3 brief) via submitInquiry(). The single "Product /
+// Service" dropdown below is kept as one field for the visitor (no layout
+// change), but split into `interestedProduct` / `interestedService` on the
+// stored record depending on which list the selected value came from, to
+// match the admin's lead schema.
 export default function ConsultationForm() {
   const {
     register,
@@ -30,17 +30,23 @@ export default function ConsultationForm() {
   } = useForm()
 
   const onSubmit = async (data) => {
-    const lead = {
-      ...data,
-      source: 'website-contact-form',
-      utm: Object.fromEntries(new URLSearchParams(window.location.search)),
-      date: new Date().toISOString(),
-      status: 'New',
+    try {
+      await submitInquiry({
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        location: data.location,
+        interestedProduct: materialNames.includes(data.interest) ? data.interest : '',
+        interestedService: serviceNames.includes(data.interest) ? data.interest : '',
+        projectType: data.projectType,
+        message: data.message,
+      })
+      toast.success('Thank you — we’ve received your message and will be in touch soon.')
+      reset()
+    } catch {
+      // Never surface the raw Firestore/network error to a customer.
+      toast.error('Something went wrong sending your message — please call or WhatsApp us directly instead.')
     }
-    console.info('[consultation-request] not yet connected to a backend — captured locally only:', lead)
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    toast.success('Thank you — we’ve received your message and will be in touch soon.')
-    reset()
   }
 
   return (

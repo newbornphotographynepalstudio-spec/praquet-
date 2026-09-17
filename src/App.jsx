@@ -27,6 +27,12 @@ const Faq = lazy(() => import('./pages/Faq'))
 const Contact = lazy(() => import('./pages/Contact'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
+// Admin (Phase 3): its own chunk tree — Firebase Auth/Firestore and every
+// admin page/component are only ever imported from within admin/AdminApp,
+// so none of it ships to a visitor browsing the public site. Not linked
+// from public navigation anywhere (see data/navigation.js).
+const AdminApp = lazy(() => import('./admin/AdminApp'))
+
 export default function App() {
   useEffect(() => {
     // Dynamically imported so the Firebase SDK ships in its own chunk and
@@ -72,6 +78,8 @@ export default function App() {
 
               <Route path="/faq" element={<Faq />} />
               <Route path="/contact" element={<Contact />} />
+
+              <Route path="/admin/*" element={<AdminApp />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Phase 3.5 security rules for the Parquet & Decor Nepal admin/CMS system.
+//
+// Not deployed by this codebase — no Firebase CLI/deploy credentials are
+// available in this environment. Deploy via `firebase deploy --only
+// firestore:rules` (after `firebase init` targeting project
+// `parquet-4d844`), or paste this file's contents into the Firebase
+// Console: Firestore Database -> Rules -> publish.
+//
+// "Admin" is pinned to one specific Firebase Auth UID (the one manually
+// created admin account — no public registration exists) rather than "any
+// authenticated user", per the Phase 3.5 brief. If a second admin account
+// is ever added, extend the UID check below (or move to a custom claim
+// such as request.auth.token.admin == true, set via the Admin SDK) rather
+// than widening this back to request.auth != null.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'U81GQQVtkihxgThV94zn6laouqk1';
+    }
+
+    // ---- Public lead capture ---------------------------------------------
+    // Anyone may create an inquiry (the public contact form) — nobody but
+    // an authenticated admin may read, update, or delete one. The create
+    // rule forces status to "New" and createdAt to the server timestamp
+    // regardless of what the client sends, so a public writer can't
+    // fabricate an already-"Converted"/"Qualified" lead or backdate one.
+    match /inquiries/{inquiryId} {
+      allow create: if request.resource.data.status == 'New'
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.name is string
+                    && request.resource.data.message is string;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---- CMS content (admin-only) -----------------------------------------
+    // The public site does not read any of these collections yet — it
+    // still reads its content from the static files under src/data/ (see
+    // the Phase 3 brief: "Do not immediately convert every public page to
+    // Firestore reads"). When a page is later wired to read one of these,
+    // relax `allow read` for that specific collection deliberately (e.g.
+    // to `allow read: if resource.data.status == 'published';`) rather
+    // than opening all of them at once.
+    match /products/{docId}        { allow read, write: if isAdmin(); }
+    match /materialOptions/{docId} { allow read, write: if isAdmin(); }
+    match /categories/{docId}      { allow read, write: if isAdmin(); }
+    match /projects/{docId}        { allow read, write: if isAdmin(); }
+    match /gallery/{docId}         { allow read, write: if isAdmin(); }
+    match /services/{docId}        { allow read, write: if isAdmin(); }
+    match /blog/{docId}            { allow read, write: if isAdmin(); }
+    match /faqs/{docId}            { allow read, write: if isAdmin(); }
+    match /testimonials/{docId}    { allow read, write: if isAdmin(); }
+    match /pages/{docId}           { allow read, write: if isAdmin(); }
+    match /seo/{docId}             { allow read, write: if isAdmin(); }
+    match /redirects/{docId}       { allow read, write: if isAdmin(); }
+    match /siteSettings/{docId}    { allow read, write: if isAdmin(); }
+
+    // ---- Deny everything else by default -----------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
