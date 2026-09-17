@@ -37,6 +37,7 @@ export const collections = {
   materialOptions: {
     label: 'Material Options',
     singular: 'Material Option',
+    reorderable: true,
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
       { name: 'slug', label: 'Slug', type: 'text', required: true },
@@ -44,6 +45,7 @@ export const collections = {
       { name: 'finish', label: 'Finish', type: 'text' },
       { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'image', label: 'Image', type: 'image' },
+      { name: 'order', label: 'Order', type: 'number', default: 0 },
       statusField,
     ],
     listColumns: ['name', 'categorySlug', 'finish', 'status'],
@@ -56,7 +58,13 @@ export const collections = {
       { name: 'name', label: 'Name', type: 'text', required: true },
       { name: 'slug', label: 'Slug', type: 'text', required: true },
       { name: 'family', label: 'Family', type: 'select', options: ['flooring', 'wall-panels'], required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'tagline', label: 'Tagline', type: 'text' },
+      { name: 'shortDescription', label: 'Short Description', type: 'textarea' },
+      { name: 'intro', label: 'Intro', type: 'textarea' },
+      { name: 'features', label: 'Features (one per line)', type: 'lines' },
+      { name: 'applications', label: 'Applications (one per line)', type: 'lines' },
+      { name: 'faqTags', label: 'FAQ Tags (comma-separated)', type: 'tags' },
+      { name: 'specNote', label: 'Spec Note (optional)', type: 'textarea', hint: 'Only for a category with no verified performance spec yet — see the brand content rule.' },
       { name: 'image', label: 'Image', type: 'image' },
       statusField,
     ],
@@ -86,10 +94,12 @@ export const collections = {
   gallery: {
     label: 'Gallery',
     singular: 'Gallery Image',
+    reorderable: true,
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'image', label: 'Image', type: 'image', required: true },
       { name: 'category', label: 'Category', type: 'text' },
+      { name: 'order', label: 'Order', type: 'number', default: 0 },
       statusField,
     ],
     listColumns: ['title', 'category', 'status'],
@@ -98,11 +108,24 @@ export const collections = {
   services: {
     label: 'Services',
     singular: 'Service',
+    reorderable: true,
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
       { name: 'slug', label: 'Slug', type: 'text', required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'image', label: 'Image', type: 'image' },
+      { name: 'tagline', label: 'Tagline', type: 'text' },
+      { name: 'shortDescription', label: 'Short Description', type: 'textarea' },
+      { name: 'intro', label: 'Intro', type: 'textarea' },
+      {
+        name: 'process',
+        label: 'Process Steps (one per line, "Title: Description")',
+        type: 'keyvalue-lines',
+        hint: 'e.g. "Site Assessment: Understanding the room before recommending a material."',
+      },
+      { name: 'applications', label: 'Applications (one per line)', type: 'lines' },
+      { name: 'heroMaterialSlug', label: 'Hero Material Slug', type: 'text', hint: 'A category slug whose image represents this service, e.g. "parquet"' },
+      { name: 'faqTags', label: 'FAQ Tags (comma-separated)', type: 'tags' },
+      { name: 'image', label: 'Image (optional override)', type: 'image' },
+      { name: 'order', label: 'Order', type: 'number', default: 0 },
       statusField,
       ...seoFields,
     ],
@@ -135,14 +158,15 @@ export const collections = {
   faqs: {
     label: 'FAQs',
     singular: 'FAQ',
+    reorderable: true,
     fields: [
       { name: 'question', label: 'Question', type: 'text', required: true },
       { name: 'answer', label: 'Answer', type: 'textarea', required: true },
-      { name: 'category', label: 'Category', type: 'text' },
+      { name: 'tags', label: 'Tags (comma-separated)', type: 'tags', hint: 'e.g. "parquet, flooring" — used to show relevant FAQs on category/service pages' },
       { name: 'order', label: 'Order', type: 'number', default: 0 },
       statusField,
     ],
-    listColumns: ['question', 'category', 'order', 'status'],
+    listColumns: ['question', 'order', 'status'],
   },
 
   testimonials: {

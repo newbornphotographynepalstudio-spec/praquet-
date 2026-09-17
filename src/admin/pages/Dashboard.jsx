@@ -14,14 +14,40 @@ function formatDate(value) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const CONTENT_COLLECTIONS = [
+  { key: 'materialOptions', label: 'Material Options', to: '/admin/materials' },
+  { key: 'projects', label: 'Projects', to: '/admin/projects' },
+  { key: 'gallery', label: 'Gallery Items', to: '/admin/gallery' },
+  { key: 'blog', label: 'Blog Posts', to: '/admin/blog' },
+  { key: 'faqs', label: 'FAQs', to: '/admin/faqs' },
+]
+
 export default function Dashboard() {
   const [inquiries, setInquiries] = useState(null)
   const [loadError, setLoadError] = useState('')
+  const [contentCounts, setContentCounts] = useState(null)
+  const [contentError, setContentError] = useState('')
 
   useEffect(() => {
     listCollection('inquiries')
       .then(setInquiries)
       .catch((err) => setLoadError(err.message || 'Could not load inquiries.'))
+
+    // One batch of one-time reads (not one per card) to build the content
+    // summary row below — real counts only, never fabricated; a genuinely
+    // empty collection just shows 0.
+    Promise.all(CONTENT_COLLECTIONS.map(({ key }) => listCollection(key)))
+      .then((results) => {
+        const counts = {}
+        CONTENT_COLLECTIONS.forEach(({ key }, i) => {
+          counts[key] = {
+            total: results[i].length,
+            published: results[i].filter((r) => r.status === 'published').length,
+          }
+        })
+        setContentCounts(counts)
+      })
+      .catch((err) => setContentError(err.message || 'Could not load content counts.'))
   }, [])
 
   const total = inquiries?.length ?? 0
@@ -54,6 +80,21 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {CONTENT_COLLECTIONS.map(({ key, label, to }) => (
+          <Link key={key} to={to} className="rounded border border-navy/10 bg-white p-5 transition-colors hover:border-gold/40">
+            <p className="font-body text-xs font-semibold uppercase tracking-wide text-charcoal/60">{label}</p>
+            <p className="mt-2 font-display text-3xl text-navy">
+              {contentCounts === null && !contentError ? '—' : (contentCounts?.[key]?.published ?? 0)}
+            </p>
+            <p className="mt-0.5 font-body text-xs text-charcoal/50">
+              {contentCounts === null && !contentError ? ' ' : `published of ${contentCounts?.[key]?.total ?? 0}`}
+            </p>
+          </Link>
+        ))}
+      </div>
+      {contentError && <p className="mt-3 rounded-sm bg-red-50 px-3 py-2 font-body text-sm text-red-700">{contentError}</p>}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded border border-navy/10 bg-white p-5">

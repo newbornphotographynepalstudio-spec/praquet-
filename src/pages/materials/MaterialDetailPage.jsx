@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { FaWhatsapp } from 'react-icons/fa'
 import Layout from '../../components/layout/Layout'
@@ -16,6 +17,7 @@ import { getMaterialBySlug, getRelatedMaterials, materialFamilies } from '../../
 import { getMaterialOptionsByCategory } from '../../data/materialOptions'
 import { getFaqsByTags } from '../../data/faqs'
 import { contact } from '../../data/contact'
+import { getPublishedMaterialOptions } from '../../lib/cms'
 
 // One reusable template serves three URL patterns — /flooring/:slug,
 // /wall-panels/:slug, and /products/:slug — all backed by the same
@@ -27,6 +29,28 @@ export default function MaterialDetailPage() {
   const { slug } = useParams()
   const location = useLocation()
   const material = getMaterialBySlug(slug)
+
+  // Renders instantly with the existing local data (identical to before
+  // this phase — no loading state, no risk of a blank section) and then,
+  // once, checks Firestore for a published CMS version of this category's
+  // material options; if one exists it quietly replaces the displayed set.
+  // See src/lib/cms/index.js for why this can't regress to a blank page
+  // (Firestore down, unconfigured, or not migrated yet all resolve to
+  // `null`, and this component just keeps showing the local data below).
+  // Hooks must run unconditionally (before the `!material` early return
+  // below), so they no-op safely when the slug doesn't match anything.
+  const [options, setOptions] = useState(() => (material ? getMaterialOptionsByCategory(material.slug) : []))
+  useEffect(() => {
+    if (!material) return
+    setOptions(getMaterialOptionsByCategory(material.slug))
+    let cancelled = false
+    getPublishedMaterialOptions(material.slug).then((cmsOptions) => {
+      if (!cancelled && cmsOptions) setOptions(cmsOptions)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [material])
 
   if (!material) return <NotFound />
 
@@ -46,7 +70,6 @@ export default function MaterialDetailPage() {
 
   const related = getRelatedMaterials(material)
   const faqs = getFaqsByTags(material.faqTags)
-  const options = getMaterialOptionsByCategory(material.slug)
 
   return (
     <Layout>

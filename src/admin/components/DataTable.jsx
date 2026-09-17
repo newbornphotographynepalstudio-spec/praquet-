@@ -1,4 +1,4 @@
-import { HiOutlinePencilSquare, HiOutlineTrash } from 'react-icons/hi2'
+import { HiOutlinePencilSquare, HiOutlineTrash, HiChevronUp, HiChevronDown } from 'react-icons/hi2'
 import StatusBadge from './StatusBadge'
 import EmptyState from './EmptyState'
 
@@ -7,13 +7,31 @@ const STATUS_LIKE = new Set(['status', 'active', 'featured', 'noindex'])
 // One generic, responsive table for every CMS list — desktop renders real
 // table rows; below `md` the same records render as stacked cards instead
 // of a horizontally-scrolling table, which is unreadable at phone widths.
-export default function DataTable({ columns, columnLabels, rows, onEdit, onDelete, emptyLabel }) {
+// `onTogglePublish` (optional) makes the status pill itself a quick
+// publish/unpublish toggle — no need to open the full edit form just to
+// flip a record live. `onReorder` (optional, paired with `reorderable` on
+// the collection config) adds small up/down controls instead of a full
+// drag-and-drop system, which would be a much bigger UI investment for a
+// handful of items per category.
+export default function DataTable({ columns, columnLabels, rows, onEdit, onDelete, onTogglePublish, onReorder, emptyLabel }) {
   if (rows.length === 0) {
     return <EmptyState message={emptyLabel} />
   }
 
   function renderValue(col, row) {
     const value = row[col]
+    if (col === 'status' && onTogglePublish) {
+      return (
+        <button
+          type="button"
+          onClick={() => onTogglePublish(row)}
+          title={value === 'published' ? 'Click to unpublish' : 'Click to publish'}
+          className="cursor-pointer rounded-sm transition-opacity hover:opacity-70"
+        >
+          <StatusBadge value={value || 'draft'} />
+        </button>
+      )
+    }
     if (STATUS_LIKE.has(col)) return <StatusBadge value={value} />
     if (Array.isArray(value)) return value.join(', ') || '—'
     return value ?? '—'
@@ -35,7 +53,7 @@ export default function DataTable({ columns, columnLabels, rows, onEdit, onDelet
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, index) => (
               <tr key={row.id} className="border-b border-navy/5 last:border-0 hover:bg-ivory-light/60">
                 {columns.map((col) => (
                   <td key={col} className="px-4 py-3 font-body text-sm text-navy">
@@ -44,6 +62,28 @@ export default function DataTable({ columns, columnLabels, rows, onEdit, onDelet
                 ))}
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
+                    {onReorder && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Move up"
+                          disabled={index === 0}
+                          onClick={() => onReorder(row, index, -1)}
+                          className="flex h-8 w-8 items-center justify-center rounded text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <HiChevronUp size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move down"
+                          disabled={index === rows.length - 1}
+                          onClick={() => onReorder(row, index, 1)}
+                          className="flex h-8 w-8 items-center justify-center rounded text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <HiChevronDown size={16} aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       aria-label="Edit"
@@ -70,7 +110,7 @@ export default function DataTable({ columns, columnLabels, rows, onEdit, onDelet
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
-        {rows.map((row) => (
+        {rows.map((row, index) => (
           <div key={row.id} className="rounded border border-navy/10 bg-white p-4">
             {columns.map((col) => (
               <div key={col} className="flex items-baseline justify-between gap-3 py-1 first:pt-0 last:pb-0">
@@ -81,6 +121,28 @@ export default function DataTable({ columns, columnLabels, rows, onEdit, onDelet
               </div>
             ))}
             <div className="mt-3 flex gap-2 border-t border-navy/10 pt-3">
+              {onReorder && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Move up"
+                    disabled={index === 0}
+                    onClick={() => onReorder(row, index, -1)}
+                    className="flex min-h-[36px] items-center justify-center rounded border border-navy/20 px-3 text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <HiChevronUp size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Move down"
+                    disabled={index === rows.length - 1}
+                    onClick={() => onReorder(row, index, 1)}
+                    className="flex min-h-[36px] items-center justify-center rounded border border-navy/20 px-3 text-navy disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <HiChevronDown size={16} aria-hidden="true" />
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => onEdit(row)}

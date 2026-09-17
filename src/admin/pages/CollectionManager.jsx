@@ -32,7 +32,12 @@ export default function CollectionManager({ collectionKey }) {
     setLoading(true)
     setLoadError('')
     try {
-      const data = await listCollection(collectionKey)
+      // Reorderable collections (material options, FAQs, gallery) list by
+      // their own curated `order` field, ascending, so the up/down controls
+      // operate on a stable, meaningful sequence rather than recency.
+      const data = config?.reorderable
+        ? await listCollection(collectionKey, { orderByField: 'order', direction: 'asc' })
+        : await listCollection(collectionKey)
       setRows(data)
     } catch (err) {
       setLoadError(err.message || 'Could not load this collection.')
@@ -93,6 +98,42 @@ export default function CollectionManager({ collectionKey }) {
     }
   }
 
+  async function handleTogglePublish(row) {
+    const next = row.status === 'published' ? 'draft' : 'published'
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: next } : r)))
+    try {
+      await updateRecord(collectionKey, row.id, { status: next })
+      toast.success(next === 'published' ? 'Published' : 'Unpublished')
+    } catch (err) {
+      toast.error(err.message || 'Could not update status.')
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)))
+    }
+  }
+
+  async function handleReorder(row, index, direction) {
+    const targetIndex = index + direction
+    const other = filteredRows[targetIndex]
+    if (!other) return
+    const rowOrder = row.order ?? index
+    const otherOrder = other.order ?? targetIndex
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id === row.id) return { ...r, order: otherOrder }
+        if (r.id === other.id) return { ...r, order: rowOrder }
+        return r
+      })
+    )
+    try {
+      await Promise.all([
+        updateRecord(collectionKey, row.id, { order: otherOrder }),
+        updateRecord(collectionKey, other.id, { order: rowOrder }),
+      ])
+    } catch (err) {
+      toast.error(err.message || 'Could not reorder.')
+      await load()
+    }
+  }
+
   return (
     <AdminLayout title={config.label}>
       {editing ? (
@@ -141,6 +182,8 @@ export default function CollectionManager({ collectionKey }) {
               rows={filteredRows}
               onEdit={setEditing}
               onDelete={setPendingDelete}
+              onTogglePublish={config.listColumns.includes('status') ? handleTogglePublish : undefined}
+              onReorder={config.reorderable && !search.trim() ? handleReorder : undefined}
               emptyLabel={
                 rows.length === 0
                   ? `No ${config.label.toLowerCase()} yet — click "Add ${config.singular}" to create the first one.`

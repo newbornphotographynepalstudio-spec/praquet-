@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Layout from '../components/layout/Layout'
 import Seo from '../components/seo/Seo'
@@ -6,7 +7,8 @@ import Container from '../components/ui/Container'
 import SectionHeading from '../components/ui/SectionHeading'
 import FAQAccordion from '../components/ui/FAQAccordion'
 import ConsultationCTA from '../components/ui/ConsultationCTA'
-import { faqs } from '../data/faqs'
+import { faqs as localFaqs } from '../data/faqs'
+import { getPublishedFaqs } from '../lib/cms'
 
 const groups = [
   { title: 'General', tags: ['general'] },
@@ -17,6 +19,20 @@ const groups = [
 ]
 
 export default function Faq() {
+  // Renders instantly from the existing local FAQ bank, then quietly swaps
+  // in the published CMS version if one exists — see the same pattern in
+  // MaterialDetailPage.jsx / src/lib/cms/index.js.
+  const [faqs, setFaqs] = useState(localFaqs)
+  useEffect(() => {
+    let cancelled = false
+    getPublishedFaqs().then((cmsFaqs) => {
+      if (!cancelled && cmsFaqs) setFaqs(cmsFaqs)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const seen = new Set()
   const grouped = groups
     .map((group) => {

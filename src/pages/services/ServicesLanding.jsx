@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { HiArrowRight } from 'react-icons/hi'
 import Layout from '../../components/layout/Layout'
 import Seo from '../../components/seo/Seo'
@@ -7,8 +8,9 @@ import SectionHeading from '../../components/ui/SectionHeading'
 import Button from '../../components/ui/Button'
 import ResponsiveImage from '../../components/media/ResponsiveImage'
 import ConsultationCTA from '../../components/ui/ConsultationCTA'
-import { services } from '../../data/services'
+import { services as localServices } from '../../data/services'
 import { getMaterialBySlug } from '../../data/materials'
+import { getPublishedServices } from '../../lib/cms'
 import { cn } from '../../utils/cn'
 
 const projectsEntry = {
@@ -21,9 +23,23 @@ const projectsEntry = {
 }
 
 export default function ServicesLanding() {
+  // Renders instantly from the existing local services data, then quietly
+  // swaps in the published CMS version if one exists — see the comment on
+  // the same pattern in MaterialDetailPage.jsx / src/lib/cms/index.js.
+  const [services, setServices] = useState(localServices)
+  useEffect(() => {
+    let cancelled = false
+    getPublishedServices().then((cmsServices) => {
+      if (!cancelled && cmsServices) setServices(cmsServices)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const rows = services.map((s) => ({
     ...s,
-    image: getMaterialBySlug(s.heroMaterialSlug).image,
+    image: getMaterialBySlug(s.heroMaterialSlug)?.image || getMaterialBySlug('parquet').image,
     to: `/services/${s.slug}`,
     cta: 'Learn More',
   }))

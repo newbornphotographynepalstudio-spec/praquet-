@@ -10,7 +10,17 @@ function initialValues(fields, record) {
   const values = {}
   for (const field of fields) {
     if (record && field.name in record) {
-      values[field.name] = field.type === 'tags' ? (record[field.name] || []).join(', ') : record[field.name]
+      if (field.type === 'tags') {
+        values[field.name] = (record[field.name] || []).join(', ')
+      } else if (field.type === 'lines') {
+        values[field.name] = (record[field.name] || []).join('\n')
+      } else if (field.type === 'keyvalue-lines') {
+        values[field.name] = (record[field.name] || [])
+          .map((item) => `${item.title || ''}: ${item.description || ''}`)
+          .join('\n')
+      } else {
+        values[field.name] = record[field.name]
+      }
     } else {
       values[field.name] = field.default ?? (field.type === 'boolean' ? false : '')
     }
@@ -48,6 +58,22 @@ export default function RecordForm({ fields, record, onSubmit, onCancel, submitL
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
+        } else if (field.type === 'lines') {
+          payload[field.name] = String(values[field.name] || '')
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        } else if (field.type === 'keyvalue-lines') {
+          payload[field.name] = String(values[field.name] || '')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const idx = line.indexOf(':')
+              return idx === -1
+                ? { title: line, description: '' }
+                : { title: line.slice(0, idx).trim(), description: line.slice(idx + 1).trim() }
+            })
         } else if (field.type === 'number') {
           payload[field.name] = values[field.name] === '' ? null : Number(values[field.name])
         }
@@ -98,12 +124,12 @@ export default function RecordForm({ fields, record, onSubmit, onCancel, submitL
                 ))}
               </select>
             </>
-          ) : field.type === 'textarea' || field.type === 'richtext' ? (
+          ) : field.type === 'textarea' || field.type === 'richtext' || field.type === 'lines' || field.type === 'keyvalue-lines' ? (
             <>
               <label className={labelClass}>{field.label}</label>
               {field.hint && <p className="mt-1 font-body text-xs text-charcoal/60">{field.hint}</p>}
               <textarea
-                rows={field.type === 'richtext' ? 10 : 4}
+                rows={field.type === 'richtext' ? 10 : field.type === 'lines' || field.type === 'keyvalue-lines' ? 5 : 4}
                 className={`mt-1.5 resize-y ${fieldClass}`}
                 value={values[field.name]}
                 onChange={(e) => setField(field.name, e.target.value)}

@@ -35,22 +35,25 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // ---- CMS content (admin-only) -----------------------------------------
-    // The public site does not read any of these collections yet — it
-    // still reads its content from the static files under src/data/ (see
-    // the Phase 3 brief: "Do not immediately convert every public page to
-    // Firestore reads"). When a page is later wired to read one of these,
-    // relax `allow read` for that specific collection deliberately (e.g.
-    // to `allow read: if resource.data.status == 'published';`) rather
-    // than opening all of them at once.
+    // ---- CMS content, publicly readable when published (Phase 3.7) --------
+    // src/lib/cms/index.js is the ONLY public reader of these four
+    // collections, and it always filters to `status == 'published'` itself
+    // — this rule is the server-side enforcement of that same boundary, so
+    // a public client can never read a draft even if it queried without
+    // that filter. Write stays admin-only, unconditionally. Every other
+    // CMS collection below is not yet wired to any public page (see
+    // README.md/the Phase 3.7 report), so it stays fully admin-only in
+    // both directions — only open exactly what's actually consumed.
+    match /materialOptions/{docId} { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
+    match /services/{docId}        { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
+    match /faqs/{docId}            { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
+    match /gallery/{docId}         { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
+
+    // ---- CMS content (admin-only, not yet publicly consumed) --------------
     match /products/{docId}        { allow read, write: if isAdmin(); }
-    match /materialOptions/{docId} { allow read, write: if isAdmin(); }
     match /categories/{docId}      { allow read, write: if isAdmin(); }
     match /projects/{docId}        { allow read, write: if isAdmin(); }
-    match /gallery/{docId}         { allow read, write: if isAdmin(); }
-    match /services/{docId}        { allow read, write: if isAdmin(); }
     match /blog/{docId}            { allow read, write: if isAdmin(); }
-    match /faqs/{docId}            { allow read, write: if isAdmin(); }
     match /testimonials/{docId}    { allow read, write: if isAdmin(); }
     match /pages/{docId}           { allow read, write: if isAdmin(); }
     match /seo/{docId}             { allow read, write: if isAdmin(); }

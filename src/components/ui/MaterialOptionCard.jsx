@@ -11,16 +11,36 @@ import ResponsiveImage from '../media/ResponsiveImage'
 // WhatsApp/consultation CTAs (ConsultationCTA, MobileStickyCTA,
 // FloatingWhatsApp) already cover enquiries for every material.
 export default function MaterialOptionCard({ option, categoryName }) {
+  // `option.image` is either the local build-time responsive-image
+  // descriptor ({tile, alt} — avif/webp/jpg srcsets, from src/data/images.js)
+  // for options still sourced from src/data/materialOptions.js, or a plain
+  // Cloudinary/URL string for a CMS-authored option (see src/lib/cms/) —
+  // the admin's image field only ever stores a single URL, since Cloudinary
+  // uploads (or a pasted URL) don't go through the build-time AVIF/WebP
+  // pipeline. Both render at the same size/position; the CMS path is a
+  // plain <img> rather than <ResponsiveImage>, since there's no multi-format
+  // srcset to give it.
+  const isResponsive = option.image && typeof option.image === 'object'
+
   return (
     <div className="group">
       <div className="relative aspect-[4/5] overflow-hidden rounded bg-charcoal/10">
-        <ResponsiveImage
-          desktop={option.image.tile}
-          alt={option.image.alt}
-          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-          className="absolute inset-0 h-full w-full"
-          imgClassName="transition-transform duration-600 ease-premium group-hover:scale-105"
-        />
+        {isResponsive ? (
+          <ResponsiveImage
+            desktop={option.image.tile}
+            alt={option.image.alt}
+            sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+            className="absolute inset-0 h-full w-full"
+            imgClassName="transition-transform duration-600 ease-premium group-hover:scale-105"
+          />
+        ) : (
+          <img
+            src={option.image}
+            alt={`${option.name} — ${option.finish || categoryName}`}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-600 ease-premium group-hover:scale-105"
+          />
+        )}
       </div>
       <span className="mt-3 block font-body text-[11px] font-semibold uppercase tracking-wide text-gold">
         {categoryName}
