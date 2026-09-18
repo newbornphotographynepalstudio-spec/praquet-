@@ -44,10 +44,27 @@ service cloud.firestore {
     // CMS collection below is not yet wired to any public page (see
     // README.md/the Phase 3.7 report), so it stays fully admin-only in
     // both directions — only open exactly what's actually consumed.
-    match /materialOptions/{docId} { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
-    match /services/{docId}        { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
-    match /faqs/{docId}            { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
-    match /gallery/{docId}         { allow read: if resource.data.status == 'published'; allow write: if isAdmin(); }
+    //
+    // `|| isAdmin()` on read (added Phase 3.8A): without it, this rule
+    // only ever grants access based on a document's own `status` field,
+    // with no clause that doesn't depend on resource.data — so Firestore
+    // can't prove an unfiltered LIST query (which the admin app runs, on
+    // purpose, since drafts must be visible in Admin) satisfies the rule,
+    // and rejects the whole query with permission-denied REGARDLESS of who
+    // is asking, including the real admin UID. This is exactly why
+    // /admin/materials, /admin/services, /admin/faqs and /admin/gallery
+    // failed while /admin/categories (whose rule is plain `isAdmin()`,
+    // with no resource.data dependency at all) worked. Adding an
+    // auth-only disjunct fixes this: Firestore can grant the whole
+    // unfiltered query on that clause alone, independent of document
+    // contents, so the admin now sees drafts and published records alike
+    // — while a public request still must supply a matching
+    // `where('status','==','published')` filter (which src/lib/cms/
+    // already does) to be granted anything at all.
+    match /materialOptions/{docId} { allow read: if resource.data.status == 'published' || isAdmin(); allow write: if isAdmin(); }
+    match /services/{docId}        { allow read: if resource.data.status == 'published' || isAdmin(); allow write: if isAdmin(); }
+    match /faqs/{docId}            { allow read: if resource.data.status == 'published' || isAdmin(); allow write: if isAdmin(); }
+    match /gallery/{docId}         { allow read: if resource.data.status == 'published' || isAdmin(); allow write: if isAdmin(); }
 
     // ---- CMS content (admin-only, not yet publicly consumed) --------------
     match /products/{docId}        { allow read, write: if isAdmin(); }
