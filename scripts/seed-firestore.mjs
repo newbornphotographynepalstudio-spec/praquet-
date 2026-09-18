@@ -34,6 +34,7 @@
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { createServer } from 'vite'
 import { initializeApp } from 'firebase/app'
 import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore'
@@ -76,13 +77,28 @@ const app = initializeApp({
 const auth = getAuth(app)
 const db = getFirestore(app)
 
-// ---- Source content (imported the same way the public site does) --------
-const { materials } = await import(path.join(ROOT, 'src/data/materials.js'))
-const { materialOptions } = await import(path.join(ROOT, 'src/data/materialOptions.js'))
-const { services } = await import(path.join(ROOT, 'src/data/services.js'))
-const { faqs } = await import(path.join(ROOT, 'src/data/faqs.js'))
-const { contact, developer } = await import(path.join(ROOT, 'src/data/contact.js'))
-const { socialLinks } = await import(path.join(ROOT, 'src/data/social.js'))
+// ---- Source content (loaded through Vite, not raw Node `import()`) ------
+// src/data/materials.js (and materialOptions.js) import their sibling
+// './images' with no file extension — perfectly valid and required for
+// Vite's own bundler resolution (which the actual site build uses), but
+// plain Node ESM's resolver requires an explicit extension and throws
+// ERR_MODULE_NOT_FOUND on a bare `import(...)` of these files. Rather than
+// add an extension to those imports — which would touch real frontend
+// source for no reason other than this script's convenience — this script
+// loads them through Vite's own SSR module graph (`ssrLoadModule`), the
+// same resolution algorithm the production build already uses, so the
+// source files never need to change.
+const vite = await createServer({ root: ROOT, server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' })
+async function loadData(relPath) {
+  return vite.ssrLoadModule(relPath)
+}
+const { materials } = await loadData('/src/data/materials.js')
+const { materialOptions } = await loadData('/src/data/materialOptions.js')
+const { services } = await loadData('/src/data/services.js')
+const { faqs } = await loadData('/src/data/faqs.js')
+const { contact, developer } = await loadData('/src/data/contact.js')
+const { socialLinks } = await loadData('/src/data/social.js')
+await vite.close()
 
 // A responsive-image descriptor's largest available JPG fallback URL — the
 // same already-optimized file the public site serves today, just without
@@ -99,7 +115,13 @@ async function seed(collectionName, id, data) {
 }
 
 console.log('Signing in as', adminEmail, '…')
-await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
+try {
+  await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
+} catch (err) {
+  console.error('\nCould not sign in:', err.code || err.message)
+  console.error('Check SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD are correct, then try again.')
+  process.exit(1)
+}
 
 // ---- categories (8) — from src/data/materials.js -------------------------
 for (const m of materials) {
